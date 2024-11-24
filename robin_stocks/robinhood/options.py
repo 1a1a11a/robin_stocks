@@ -166,7 +166,7 @@ def find_tradable_options(symbol, expirationDate=None, strikePrice=None, optionT
     return(filter_data(data, info))
 
 @login_required
-def find_options_by_expiration(inputSymbols, expirationDate, optionType=None, info=None):
+def find_options_by_expiration(inputSymbols, expirationDate, optionType=None, info=None, max_strike_price=None, min_strike_price=None, jason_filter=False):
     """Returns a list of all the option orders that match the seach parameters
 
     :param inputSymbols: The ticker of either a single stock or a list of stocks.
@@ -192,13 +192,25 @@ def find_options_by_expiration(inputSymbols, expirationDate, optionType=None, in
     data = []
     for symbol in symbols:
         allOptions = find_tradable_options(symbol, expirationDate, None, optionType, None)
-        filteredOptions = [item for item in allOptions if item.get("expiration_date") == expirationDate]
-
+        filteredOptions = []
+        for item in allOptions:
+            if item.get("expiration_date") == expirationDate:
+                s = float(item.get("strike_price"))
+                if max_strike_price and s > max_strike_price:
+                    continue
+                if min_strike_price and s < min_strike_price:
+                    continue
+                if jason_filter and int(s * 10) % 5 != 0:
+                    continue
+                filteredOptions.append(item)
+        # filteredOptions = [item for item in allOptions if item.get("expiration_date") == expirationDate]
+        # print(len(filteredOptions), len(allOptions))
+        
         for item in filteredOptions:
             marketData = get_option_market_data_by_id(item['id'])
             if marketData:
                 item.update(marketData[0])
-            write_spinner()
+            # write_spinner()
 
         data.extend(filteredOptions)
 
